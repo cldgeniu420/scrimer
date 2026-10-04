@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>chb</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #ffffff; color: #111111; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+
+  .top {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: calc(env(safe-area-inset-top, 0px) + 16px) 20px 0;
+    font-size: 18px;
+  }
+  .logo { font-weight: 700; letter-spacing: 0.5px; }
+  .creator { color: #111111; text-decoration: none; border-bottom: 1px solid #111111; }
+  .creator:focus-visible, .btn:focus-visible { outline: 3px solid #1a73ff; outline-offset: 4px; }
+
+  .center { height: 100%; display: flex; align-items: center; justify-content: center; }
+  .btn {
+    background: #1a73ff; color: #ffffff; border: 0; cursor: pointer;
+    font-size: 28px; font-weight: 600;
+    padding: 22px 56px; border-radius: 18px;
+    transition: transform .15s ease;
+  }
+  .btn:active { transform: scale(.96); }
+
+  #scare {
+    position: fixed; inset: 0; z-index: 10;
+    display: none; background: #000;
+    align-items: center; justify-content: center;
+  }
+  #scare.on { display: flex; animation: shake .08s infinite; }
+  #scare img { width: 100%; height: 100%; object-fit: cover; }
+  @keyframes shake {
+    0% { transform: translate(0, 0) scale(1.05); }
+    25% { transform: translate(-8px, 6px) scale(1.08); }
+    50% { transform: translate(8px, -6px) scale(1.05); }
+    75% { transform: translate(-6px, -8px) scale(1.08); }
+    100% { transform: translate(0, 0) scale(1.05); }
+  }
+  @media (prefers-reduced-motion: reduce) { #scare.on { animation: none; } }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <span class="logo">chb</span>
+  <a class="creator" href="https://github.com/cldgeniu420" target="_blank" rel="noopener">создатель</a>
+</div>
+
+<div class="center">
+  <button class="btn" id="go">Привет!</button>
+</div>
+
+<!-- Твоя картинка: положи файл scream.jpg рядом с index.html -->
+<div id="scare"><img src="scream.jpg" alt=""></div>
+
+<!-- Твой звук: положи файл scream.mp3 рядом с index.html -->
+<audio id="snd" src="scream.mp3" preload="auto"></audio>
+
+<script>
+  var btn = document.getElementById('go');
+  var scare = document.getElementById('scare');
+  var snd = document.getElementById('snd');
+
+  // Усиление звука: 1 = как в файле, 3 = в три раза громче.
+  // Можно менять (например 2, 4, 5), но чем больше, тем сильнее хрип.
+  var BOOST = 3;
+
+  var ctx = null;
+  function setupBoost() {
+    // Усиление работает только на http/https (например GitHub Pages),
+    // при открытии файла напрямую звук играет без усиления.
+    if (!/^https?:$/.test(location.protocol)) return;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    try {
+      ctx = new AC();
+      var source = ctx.createMediaElementSource(snd);
+      var gain = ctx.createGain();
+      gain.gain.value = BOOST;
+
+      // Ограничитель: не даёт звуку превратиться в сплошной треск
+      var limiter = ctx.createDynamicsCompressor();
+      limiter.threshold.value = -6;
+      limiter.knee.value = 0;
+      limiter.ratio.value = 20;
+      limiter.attack.value = 0.001;
+      limiter.release.value = 0.1;
+
+      source.connect(gain);
+      gain.connect(limiter);
+      limiter.connect(ctx.destination);
+    } catch (e) { ctx = null; }
+  }
+
+  btn.addEventListener('click', function () {
+    if (!ctx) setupBoost();
+    if (ctx && ctx.state === 'suspended') ctx.resume();
+
+    snd.volume = 1;            // максимум громкости плеера
+    snd.currentTime = 0;
+    snd.play().catch(function () {});
+
+    scare.classList.add('on');
+
+    if (navigator.vibrate) navigator.vibrate([400, 100, 400, 100, 600]);
+    var el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen().catch(function () {});
+  });
+
+  // Закрыть скример можно нажатием на экран
+  scare.addEventListener('click', function () {
+    snd.pause();
+    scare.classList.remove('on');
+    if (document.fullscreenElement) document.exitFullscreen();
+  });
+</script>
+</body>
+</html>
